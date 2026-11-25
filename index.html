@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111318">
+<title>Baixador CNF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: ferramenta de trabalho, direta. IDEA: mesa de corte de vídeos. PICTURE: grade de reels verticais.
+   COLOUR: grafite, verde-ação, âmbar para pendente. TYPE: Figtree. LAYOUT: barra de abas, grade 9:16. */
+:root{color-scheme:light dark;--bg:light-dark(#f4f5f7,#111318);--card:light-dark(#fff,#1b1e25);--ink:light-dark(#14161b,#eef0f4);
+--mut:light-dark(#5d6472,#9aa3b2);--line:light-dark(#e2e5ea,#2a2f3a);--go:#16a34a;--go2:#22c55e;--warn:#f59e0b;--bad:#ef4444}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif;overflow-x:clip}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:12px max(4vw,14px)}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
+h1{font-size:22px;margin:0;font-weight:800}
+.uso{font-size:13px;color:var(--mut)}
+.uso b{color:var(--ink)}
+.bar{height:6px;border-radius:9px;background:var(--line);overflow:hidden;width:140px;display:inline-block;vertical-align:middle;margin-left:6px}
+.bar i{display:block;height:100%;background:var(--go2)}
+nav{display:flex;gap:6px;margin-top:10px;overflow-x:auto}
+nav button{flex:none}
+main{padding:16px max(4vw,14px) 60px;max-width:1240px;margin:auto}
+button,.btn{font:600 15px Figtree,system-ui;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:10px 14px;min-height:44px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--go2);outline-offset:2px}
+button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.prim{background:var(--go);border-color:var(--go);color:#fff}
+.pequeno{padding:6px 10px;min-height:36px;font-size:14px}
+button:disabled{opacity:.5;cursor:wait}
+input,select{font:16px Figtree,system-ui;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:44px}
+.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.linha input{flex:1 1 220px}
+.aviso{font-size:14px;color:var(--mut);margin:8px 0 0}
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.midia{aspect-ratio:9/16;background:#000;position:relative;display:grid;place-items:center;color:#fff;font-size:14px}
+.midia img,.midia video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.selo{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.65);padding:3px 8px;border-radius:99px;font-size:12px;z-index:2}
+.selo.pend{background:var(--warn);color:#111}.selo.err{background:var(--bad)}.selo.post{left:auto;right:8px;background:var(--go)}
+.info{padding:10px 12px;display:flex;flex-direction:column;gap:8px;flex:1}
+.autor{font-weight:800;font-size:15px}
+.meta{font-size:13px;color:var(--mut)}
+.leg{font-size:14px;max-height:4.5em;overflow:hidden;white-space:pre-wrap;cursor:pointer}
+.leg.aberta{max-height:none}
+.acoes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:auto}
+.acoes .prim{grid-column:1/-1}
+.perfil{display:flex;justify-content:space-between;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;flex-wrap:wrap}
+.perfil .erro{color:var(--bad);font-size:13px}
+.vazio{text-align:center;color:var(--mut);padding:50px 10px}
+#login{max-width:380px;margin:12vh auto;padding:24px;background:var(--card);border:1px solid var(--line);border-radius:16px}
+#login h1{margin-bottom:6px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;z-index:9}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+@media(max-width:600px){.grade{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.acoes{grid-template-columns:1fr}.bar{width:90px}}
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <h1>Baixador CNF</h1>
+  <p class="aviso">Digite a senha do app (a mesma que você colocou no Supabase em BX_SENHA).</p>
+  <form id="fLogin" class="linha" style="margin-top:14px">
+    <input id="senha" type="password" autocomplete="current-password" placeholder="Senha" required>
+    <button class="prim">Entrar</button>
+  </form>
+  <p id="loginErro" class="aviso" style="color:var(--bad)"></p>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="top">
+      <h1>Baixador CNF</h1>
+      <span class="uso" id="uso"></span>
+    </div>
+    <nav>
+      <button data-aba="videos" class="on">Vídeos</button>
+      <button data-aba="perfis">Perfis (@)</button>
+      <button data-aba="link">Colar link</button>
+      <button id="atualizar">Atualizar</button>
+    </nav>
+  </header>
+  <main>
+    <section id="aba-videos">
+      <div class="linha">
+        <select id="fPerfil"><option value="">Todos os perfis</option></select>
+        <select id="fStatus">
+          <option value="">Todos</option><option value="novo">Não postados</option>
+          <option value="postado">Postados</option><option value="guardar">Guardados</option><option value="pend">Baixando / erro</option>
+        </select>
+        <select id="ordem"><option value="data">Mais novos</option><option value="views">Mais views</option></select>
+      </div>
+      <div class="grade" id="grade"></div>
+    </section>
+
+    <section id="aba-perfis" hidden>
+      <form id="fAdd" class="linha">
+        <input id="novoPerfil" placeholder="@perfil do Instagram" autocapitalize="off" autocorrect="off" required>
+        <button class="prim">Adicionar</button>
+      </form>
+      <p class="aviso">Adicionar um @ gasta 2 créditos do ScrapeCreators na primeira vez. Depois a rotina checa 1x por dia (1 crédito por @) e baixa os reels novos sozinha.</p>
+      <div class="linha" style="margin-top:10px"><button id="checarTodos">Checar todos agora</button></div>
+      <div id="listaPerfis"></div>
+    </section>
+
+    <section id="aba-link" hidden>
+      <form id="fLink" class="linha">
+        <input id="url" placeholder="Link do reel do Instagram ou do Kwai" required>
+        <button class="prim">Baixar</button>
+      </form>
+      <p class="aviso">Instagram gasta 1 crédito por link. Kwai é grátis. O vídeo aparece na aba Vídeos.</p>
+    </section>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+{
+const FN = "https://nohwejlxdnjsjmsnmftv.supabase.co/functions/v1/baixador";
+const ANON = "sb_publishable_5UD9GrgeU667ZKzTirjnAA_t1laahwY";
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ler = (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
+const gravar = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} };
+let senha = ler("bx_senha");
+let dados = { perfis: [], posts: [] };
+let timer = null;
+
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3500);
+}
+
+async function api(acao, extra = {}) {
+  const r = await fetch(FN, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-senha": senha, apikey: ANON },
+    body: JSON.stringify({ acao, ...extra }),
+  });
+  const j = await r.json().catch(() => ({ erro: "resposta inválida" }));
+  if (r.status === 401) { sair(); throw new Error("senha errada"); }
+  if (j.erro) throw new Error(j.erro);
+  return j;
+}
+
+function sair() { senha = ""; gravar("bx_senha", ""); $("#app").hidden = true; $("#login").hidden = false; }
+
+$("#fLogin").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  senha = $("#senha").value.trim();
+  try { await api("entrar"); gravar("bx_senha", senha); iniciar(); }
+  catch (err) { $("#loginErro").textContent = err.message; }
+});
+
+function mb(b) { return (b / 1048576).toFixed(0); }
+function num(n) { if (n == null) return ""; return n >= 1e6 ? (n / 1e6).toFixed(1) + " mi" : n >= 1e3 ? (n / 1e3).toFixed(1) + " mil" : String(n); }
+function dataBR(s) { if (!s) return ""; const d = new Date(s); return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }); }
+
+async function carregar() {
+  try {
+    dados = await api("listar");
+    const pct = Math.min(100, (dados.uso_bytes / 1073741824) * 100);
+    $("#uso").innerHTML = `<b>${mb(dados.uso_bytes)} MB</b> de 1 GB · apagam após ${esc(dados.dias_guardar)} dias<span class="bar"><i style="width:${pct.toFixed(1)}%"></i></span>`;
+    desenharPerfis(); desenharVideos();
+    const pend = dados.posts.some((p) => p.status === "pendente");
+    clearTimeout(timer); if (pend) timer = setTimeout(carregar, 30000);
+  } catch (e) { toast(e.message); }
+}
+
+function desenharPerfis() {
+  const sel = $("#fPerfil"), atual = sel.value;
+  sel.innerHTML = '<option value="">Todos os perfis</option>' + dados.perfis.map((p) => `<option value="${esc(p.id)}">@${esc(p.usuario)}</option>`).join("") + '<option value="link">Links colados</option>';
+  sel.value = atual;
+  $("#listaPerfis").innerHTML = dados.perfis.length ? dados.perfis.map((p) => {
+    const qtd = dados.posts.filter((x) => x.perfil_id === p.id).length;
+    return `<div class="perfil"><div><div class="autor">@${esc(p.usuario)} ${p.ativo ? "" : "· pausado"}</div>
+      <div class="meta">${qtd} vídeos · última checagem: ${p.ultima_checagem ? new Date(p.ultima_checagem).toLocaleString("pt-BR") : "nunca"}</div>
+      ${p.ultimo_erro ? `<div class="erro">${esc(p.ultimo_erro)}</div>` : ""}</div>
+      <div class="linha"><button class="pequeno" data-checar="${esc(p.id)}">Checar agora</button>
+      <button class="pequeno" data-pausar="${esc(p.id)}" data-ativo="${p.ativo ? 0 : 1}">${p.ativo ? "Pausar" : "Retomar"}</button>
+      <button class="pequeno" data-remover="${esc(p.id)}" data-nome="${esc(p.usuario)}">Remover</button></div></div>`;
+  }).join("") : '<p class="vazio">Nenhum @ ainda. Adicione o primeiro acima.</p>';
+}
+
+function filtrar() {
+  const fp = $("#fPerfil").value, fs = $("#fStatus").value;
+  let l = dados.posts.filter((p) => {
+    if (fp === "link" && p.perfil_id) return false;
+    if (fp && fp !== "link" && String(p.perfil_id) !== fp) return false;
+    if (fs === "novo") return !p.postado && p.status === "baixado";
+    if (fs === "postado") return p.postado;
+    if (fs === "guardar") return p.guardar;
+    if (fs === "pend") return p.status !== "baixado";
+    return true;
+  });
+  if ($("#ordem").value === "views") l = [...l].sort((a, b) => (b.views || 0) - (a.views || 0));
+  return l;
+}
+
+function desenharVideos() {
+  const l = filtrar();
+  $("#grade").innerHTML = l.length ? l.map((p) => {
+    const selo = p.status === "pendente" ? '<span class="selo pend">baixando…</span>' : p.status === "erro" ? '<span class="selo err">erro</span>' : `<span class="selo">${esc(p.plataforma)}</span>`;
+    const midia = p.thumb_url ? `<img src="${esc(p.thumb_url)}" alt="" loading="lazy">` : (p.status === "baixado" ? "toque para ver" : "");
+    const pronto = p.status === "baixado";
+    return `<article class="card" data-id="${esc(p.id)}">
+      <div class="midia" data-play="${esc(p.id)}">${midia}${selo}${p.postado ? '<span class="selo post">postado</span>' : ""}</div>
+      <div class="info">
+        <div class="autor">@${esc(p.autor || "link")}</div>
+        <div class="meta">${[p.views != null ? num(p.views) + " views" : "", p.likes != null ? num(p.likes) + " likes" : "", dataBR(p.publicado_em || p.criado_em)].filter(Boolean).join(" · ")}</div>
+        <div class="leg" title="Toque para abrir">${esc(p.legenda || "(sem legenda)")}</div>
+        ${p.status === "erro" ? `<div class="meta" style="color:var(--bad)">${esc(p.erro)}</div>` : ""}
+        <div class="acoes">
+          ${pronto ? `<button class="prim pequeno" data-share="${esc(p.id)}">Salvar no celular / compartilhar</button>
+          <a class="btn pequeno" href="${esc(p.baixar_url)}" rel="noopener">Baixar</a>` : `<button class="pequeno" data-retry="${esc(p.id)}">Tentar de novo</button>`}
+          <button class="pequeno" data-copiar="${esc(p.id)}">Copiar legenda</button>
+          <button class="pequeno" data-postado="${esc(p.id)}">${p.postado ? "Desmarcar" : "Já postei"}</button>
+          <button class="pequeno" data-guardar="${esc(p.id)}">${p.guardar ? "★ Guardado" : "☆ Guardar"}</button>
+          ${p.url ? `<a class="btn pequeno" href="${esc(p.url)}" target="_blank" rel="noopener">Original</a>` : ""}
+          <button class="pequeno" data-apagar="${esc(p.id)}">Apagar</button>
+        </div>
+      </div></article>`;
+  }).join("") : '<p class="vazio">Nada por aqui ainda. Adicione um @ na aba Perfis ou cole um link.</p>';
+}
+
+const post = (id) => dados.posts.find((p) => String(p.id) === String(id));
+
+const arquivos = {};
+async function compartilhar(p, btn) {
+  // o celular só deixa compartilhar logo depois do toque; então: 1º toque prepara, 2º compartilha
+  const arq = arquivos[p.id];
+  if (!arq) {
+    btn.disabled = true; btn.textContent = "Preparando…";
+    try {
+      const blob = await (await fetch(p.video_url)).blob();
+      arquivos[p.id] = new File([blob], `${p.autor || "video"}_${p.post_id}.mp4`, { type: "video/mp4" });
+      btn.textContent = "Pronto, toque para enviar";
+    } catch (e) { toast("Não deu: " + e.message); btn.textContent = "Salvar no celular / compartilhar"; }
+    btn.disabled = false;
+    return;
+  }
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [arq] })) {
+      navigator.clipboard?.writeText(p.legenda || "").catch(() => {});
+      await navigator.share({ files: [arq] });
+      toast("Legenda copiada. É só colar no post.");
+    } else {
+      const blob = arq;
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = arq.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      toast("Baixando o vídeo…");
+    }
+  } catch (e) { if (e.name !== "AbortError") toast("Não deu: " + e.message); }
+}
+
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("button,[data-play],.leg");
+  if (!b) return;
+  const d = b.dataset;
+  try {
+    if (d.aba) {
+      document.querySelectorAll("nav [data-aba]").forEach((x) => x.classList.toggle("on", x === b));
+      ["videos", "perfis", "link"].forEach((a) => ($("#aba-" + a).hidden = a !== d.aba));
+      try { location.hash = d.aba; } catch {}
+    } else if (b.id === "atualizar") { b.disabled = true; await api("processar"); await carregar(); b.disabled = false; toast("Atualizado"); }
+    else if (b.classList.contains("leg")) b.classList.toggle("aberta");
+    else if (d.play) {
+      const p = post(d.play); if (!p?.video_url || b.querySelector("video")) return;
+      b.innerHTML = `<video src="${esc(p.video_url)}" controls autoplay playsinline></video>`;
+    }
+    else if (d.share) compartilhar(post(d.share), b);
+    else if (d.copiar) { await navigator.clipboard.writeText(post(d.copiar)?.legenda || ""); toast("Legenda copiada"); }
+    else if (d.postado) { const p = post(d.postado); await api("marcar", { id: p.id, postado: !p.postado }); await carregar(); }
+    else if (d.guardar) { const p = post(d.guardar); await api("marcar", { id: p.id, guardar: !p.guardar }); await carregar(); toast(p.guardar ? "Vai apagar com o tempo" : "Guardado: não apaga sozinho"); }
+    else if (d.apagar) { if (b.dataset.conf) { await api("apagar", { id: d.apagar }); await carregar(); } else { b.dataset.conf = 1; b.textContent = "Confirmar"; setTimeout(() => { delete b.dataset.conf; b.textContent = "Apagar"; }, 3000); } }
+    else if (d.retry) { b.disabled = true; const r = await api("tentar_de_novo", { id: d.retry }); toast(r.ok ? "Baixado" : "Ainda não deu"); await carregar(); }
+    else if (d.checar) { b.disabled = true; b.textContent = "Checando…"; const r = await api("checar_agora", { id: Number(d.checar) }); resumo(r); await carregar(); }
+    else if (d.pausar) { await api("pausar_perfil", { id: Number(d.pausar), ativo: d.ativo === "1" }); await carregar(); }
+    else if (d.remover) { if (b.dataset.conf) { await api("del_perfil", { id: Number(d.remover) }); await carregar(); toast("@" + d.nome + " removido (os vídeos ficam)"); } else { b.dataset.conf = 1; b.textContent = "Confirmar"; setTimeout(() => { delete b.dataset.conf; b.textContent = "Remover"; }, 3000); } }
+    else if (b.id === "checarTodos") { b.disabled = true; b.textContent = "Checando…"; const r = await api("checar_agora"); resumo(r); await carregar(); b.disabled = false; b.textContent = "Checar todos agora"; }
+  } catch (err) { toast(err.message); b.disabled = false; }
+});
+
+function resumo(r) {
+  const res = r.res || [];
+  const novos = res.reduce((s, x) => s + (x.novos || 0), 0);
+  const erros = res.filter((x) => x.erro);
+  toast(erros.length ? `Erro em @${erros[0].usuario}: ${erros[0].erro}` : `${novos} vídeo(s) novo(s). Baixando…`);
+}
+
+$("#fAdd").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.submitter || $("#fAdd button"); btn.disabled = true; btn.textContent = "Buscando…";
+  try { const r = await api("add_perfil", { usuario: $("#novoPerfil").value }); resumo({ res: [r.res] }); $("#novoPerfil").value = ""; await carregar(); }
+  catch (err) { toast(err.message); }
+  btn.disabled = false; btn.textContent = "Adicionar";
+});
+
+$("#fLink").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.submitter || $("#fLink button"); btn.disabled = true; btn.textContent = "Baixando…";
+  try { const r = await api("link", { url: $("#url").value }); toast(r.ok ? "Pronto! Está na aba Vídeos." : "Não deu: " + (r.erro || "erro")); $("#url").value = ""; await carregar(); }
+  catch (err) { toast(err.message); }
+  btn.disabled = false; btn.textContent = "Baixar";
+});
+
+["#fPerfil", "#fStatus", "#ordem"].forEach((s) => $(s).addEventListener("change", desenharVideos));
+
+function iniciar() {
+  $("#login").hidden = true; $("#app").hidden = false;
+  const aba = location.hash.slice(1);
+  if (["perfis", "link"].includes(aba)) document.querySelector(`[data-aba="${aba}"]`).click();
+  carregar();
+}
+
+if (senha) iniciar(); else $("#login").hidden = false;
+}
+</script>
+</body>
+</html>
