@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Baixador CNF</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{color-scheme:dark;--bg:#0b0d12;--panel:#12151c;--panel2:#181c25;--line:#232837;--line2:#2e3446;--ink:#eef1f6;--mut:#8b93a7;--dim:#5d6578;
@@ -215,7 +216,8 @@ h3.sec{font-size:13px;color:var(--mut);font-weight:600;margin:26px 0 12px}
   <form class="lbox" id="fLogin">
     <div class="brand"><div class="logo" data-ic="down"></div><div>Baixador CNF<small>Compre na Fronteira</small></div></div>
     <h2>Entrar</h2>
-    <p>Use a senha definida em BX_SENHA no Supabase.</p>
+    <p>Use o e-mail e a senha da sua conta admin no Supabase.</p>
+    <input id="email" type="email" autocomplete="username" placeholder="E-mail" required>
     <input id="senha" type="password" autocomplete="current-password" placeholder="Senha" required>
     <button class="btn pri">Entrar</button>
     <p id="loginErro" class="err" style="margin:10px 0 0"></p>
@@ -327,7 +329,7 @@ const $ = (s) => document.querySelector(s);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ler = (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
 const gravar = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} };
-let senha = ler("bx_senha");
+const sbc = window.supabase.createClient("https://nohwejlxdnjsjmsnmftv.supabase.co", ANON, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "bx_auth" } });
 let dados = null, filtro = "", pagina = "videos", timer = null, abertoId = null;
 const arquivos = {};
 
@@ -337,13 +339,15 @@ function toast(msg, erro) {
 }
 
 async function api(acao, extra = {}) {
-  const r = await fetch(FN, { method: "POST", headers: { "Content-Type": "application/json", "x-senha": senha, apikey: ANON }, body: JSON.stringify({ acao, ...extra }) });
+  const { data: { session } } = await sbc.auth.getSession();
+  if (!session) { sair(); throw new Error("Faça login"); }
+  const r = await fetch(FN, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token, apikey: ANON }, body: JSON.stringify({ acao, ...extra }) });
   const j = await r.json().catch(() => ({ erro: "Resposta inválida do servidor" }));
-  if (r.status === 401) { sair(); throw new Error("Senha errada"); }
+  if (r.status === 401 || r.status === 403) { await sair(); throw new Error(j.erro || "Sem acesso"); }
   if (j.erro) throw new Error(j.erro);
   return j;
 }
-function sair() { senha = ""; gravar("bx_senha", ""); $("#app").hidden = true; $("#login").hidden = false; }
+async function sair() { try { await sbc.auth.signOut(); } catch {} $("#app").hidden = true; $("#login").hidden = false; }
 
 const num = (n) => n == null ? "–" : n >= 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " mi" : n >= 1e3 ? (n / 1e3).toFixed(1).replace(".", ",") + " mil" : String(n);
 const quando = (s) => { if (!s) return ""; const d = (Date.now() - new Date(s)) / 36e5; return d < 1 ? "agora" : d < 24 ? `há ${Math.floor(d)} h` : d < 48 ? "ontem" : new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }); };
@@ -565,8 +569,12 @@ $("#fLink").addEventListener("submit", async (e) => {
   if (r) { r.ok ? toast("Pronto! Vídeo baixado.") : toast("Não deu: " + (r.erro || "erro"), 1); carregar(); }
 });
 $("#fLogin").addEventListener("submit", async (e) => {
-  e.preventDefault(); senha = $("#senha").value.trim();
-  try { await api("entrar"); gravar("bx_senha", senha); iniciar(); } catch (err) { $("#loginErro").textContent = err.message; }
+  e.preventDefault(); $("#loginErro").textContent = "";
+  const btn = e.target.querySelector("button"); btn.disabled = true;
+  const { error } = await sbc.auth.signInWithPassword({ email: $("#email").value.trim(), password: $("#senha").value });
+  if (error) { $("#loginErro").textContent = error.message === "Invalid login credentials" ? "E-mail ou senha errados" : error.message; btn.disabled = false; return; }
+  try { await api("entrar"); $("#senha").value = ""; iniciar(); } catch (err) { $("#loginErro").textContent = err.message; }
+  btn.disabled = false;
 });
 ["#fPerfil", "#ordem"].forEach((s) => $(s).addEventListener("change", desenharVideos));
 let tb; $("#busca").addEventListener("input", () => { clearTimeout(tb); tb = setTimeout(() => { if (pagina !== "videos") location.hash = "videos"; desenharVideos(); }, 150); });
@@ -583,7 +591,7 @@ function rota() {
 addEventListener("hashchange", rota);
 
 function iniciar() { $("#login").hidden = true; $("#app").hidden = false; rota(); desenharVideos(); carregar(); }
-if (senha) iniciar(); else $("#login").hidden = false;
+sbc.auth.getSession().then(({ data }) => data.session ? iniciar() : ($("#login").hidden = false));
 }
 </script>
 </body>

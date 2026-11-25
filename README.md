@@ -11,7 +11,7 @@ App para acompanhar perfis do Instagram e baixar os reels novos automaticamente,
 | Nome | O que é |
 |---|---|
 | `SCRAPECREATORS_API_KEY` | chave da API do ScrapeCreators |
-| `BX_SENHA` | senha para entrar no app |
+| (login) | e-mail e senha de uma conta da tabela `admins` do Supabase |
 
 Nenhum segredo fica neste repositório. A chave `sb_publishable_...` no `index.html` é pública por natureza e não dá acesso às tabelas.
 

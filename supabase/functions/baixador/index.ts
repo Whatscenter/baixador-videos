@@ -1,5 +1,5 @@
 // Baixador de vídeos — função única do Supabase.
-// Segredos (Supabase > Edge Functions > Secrets): SCRAPECREATORS_API_KEY e BX_SENHA.
+// Segredo (Supabase > Edge Functions > Secrets): SCRAPECREATORS_API_KEY. Login: contas da tabela admins.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -8,7 +8,7 @@ const BUCKET = "baixador";
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type, x-senha, authorization, apikey",
+  "Access-Control-Allow-Headers": "content-type, authorization, apikey, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -234,10 +234,12 @@ Deno.serve(async (req) => {
     return json({ erro: "ação desconhecida" }, 400);
   }
 
-  // app (senha)
-  const senha = Deno.env.get("BX_SENHA");
-  if (!senha) return json({ erro: "Falta o segredo BX_SENHA no Supabase" }, 500);
-  if (req.headers.get("x-senha") !== senha) return json({ erro: "senha errada" }, 401);
+  // app: só contas do Supabase que estão na tabela admins
+  const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const { data: quem } = token ? await sb.auth.getUser(token) : { data: { user: null } };
+  if (!quem?.user) return json({ erro: "faça login de novo" }, 401);
+  const { data: adm } = await sb.from("admins").select("user_id").eq("user_id", quem.user.id).maybeSingle();
+  if (!adm) return json({ erro: "essa conta não é admin" }, 403);
 
   try {
     switch (acao) {
